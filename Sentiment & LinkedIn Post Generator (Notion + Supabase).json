@@ -1,0 +1,373 @@
+{
+  "name": "Sentiment & LinkedIn Post Generator (Notion + Supabase)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "21cb04e3-753b-443d-82b1-a3fa17731100",
+      "name": "Start",
+      "type": "n8n-nodes-base.start",
+      "typeVersion": 1,
+      "position": [
+        -2400,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "functionCode": "const resultados = [];\nfor (const item of $json[\"items\"] || []) {\n  const data = item.snippet.topLevelComment.snippet;\n  resultados.push({\n    comentario_original: data.textOriginal,\n    autor: data.authorDisplayName,\n    fecha: data.publishedAt,\n    likes: data.likeCount\n  });\n}\nreturn resultados;"
+      },
+      "id": "2479d232-491f-429e-8510-9bb3f55f865f",
+      "name": "Limpiar Comentarios",
+      "type": "n8n-nodes-base.function",
+      "typeVersion": 1,
+      "position": [
+        -1904,
+        288
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "f9488286-76ac-4518-ac7a-d9c3324255d2",
+      "name": "Limit",
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -1280,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "name": "comentario_original",
+              "value": "={{ $json[\"comentario_original\"] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9be35e43-90da-4485-8c92-888a0bde7b0e",
+      "name": "Edit Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1072,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Analiza el siguiente comentario y devuelve SOLO un JSON válido con esta estructura:\\n{\\n  \\\"comentario_original\\\": \\\"{{$json.comentario_original}}\\\",\\n  \\\"sentimiento\\\": \\\"<positivo | negativo | neutral>\\\",\\n  \\\"intensidad_sentimiento\\\": \\\"<baja | media | alta>\\\",\\n  \\\"emociones_detectadas\\\": [\\\"<ira | tristeza | alegría | miedo | sorpresa | desprecio>\\\"],\\n  \\\"justificacion\\\": \\\"<breve explicación>\\\",\\n  \\\"tema_detectado\\\": \\\"<categoría>\\\",\\n  \\\"posible_reaccion_comunidad\\\": \\\"<rechazo | apoyo | polarización | indiferencia>\\\",\\n  \\\"riesgo_reputacional\\\": \\\"<bajo | medio | alto>\\\",\\n  \\\"tipo_de_usuario\\\": \\\"<seguidor | crítico | detractor | neutral>\\\",\\n  \\\"nivel_de_influencia\\\": \\\"<bajo | medio | alto>\\\",\\n  \\\"accion_recomendada\\\": { \\\"tipo\\\": \\\"<respuesta | contención | agradecimiento | amplificación | silencio estratégico>\\\" }\\n}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "options": {}
+      },
+      "id": "f34672e9-4f3e-4283-8ac6-be6cb1d0219c",
+      "name": "Analizador de Sentimiento (GPT-4-mini)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -864,
+        272
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "mKYl28Ake7YlIuH2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const content = item.json.message?.content || item.json;\n  return {\n    comentario_original: content.comentario_original,\n    sentimiento: content.sentimiento,\n    intensidad_sentimiento: content.intensidad_sentimiento,\n    emociones_detectadas: content.emociones_detectadas,\n    justificacion: content.justificacion,\n    tema_detectado: content.tema_detectado,\n    posible_reaccion_comunidad: content.posible_reaccion_comunidad,\n    riesgo_reputacional: content.riesgo_reputacional,\n    tipo_de_usuario: content.tipo_de_usuario,\n    nivel_de_influencia: content.nivel_de_influencia,\n    accion_recomendada: content.accion_recomendada\n  };\n});"
+      },
+      "id": "82e50808-efc5-4418-b753-3e2a4c2faa77",
+      "name": "Code in JavaScript (Clean Data)",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -576,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres un Community Manager estratégico que convierte análisis de comentarios en narrativas de LinkedIn.\n{{ JSON.stringify($json, null, 2) }}\n{{ $json.comentario_original }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "749e6014-758a-43f6-aff7-2b9f18682f99",
+      "name": "Generador de Post (GPT-5 – Community Manager)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.8,
+      "position": [
+        -352,
+        128
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "mKYl28Ake7YlIuH2",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const content = item.json?.message?.content || item.json?.post_generado || item.json?.content || 'Sin contenido';\n  return {\n    parent: { database_id: '290d136c07c68015b7a0fcf7091d8418' },\n    properties: {\n      Content: {\n        title: [ { text: { content } } ]\n      }\n    }\n  };\n});"
+      },
+      "id": "99574fc0-df1b-4416-8854-e96783477554",
+      "name": "Preparar para Notion",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -64,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.notion.com/v1/pages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "notionApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "b7fda138-3416-494e-8498-45fe4f23a7fd",
+      "name": "Enviar a Notion",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        160,
+        160
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "SWH9rOP8zJvmdXls",
+          "name": "Notion account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR_PROJECT_ID.supabase.co/rest/v1/posts_generados",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "options": {}
+      },
+      "id": "c62bb24b-062d-49da-856a-e8735c85c1da",
+      "name": "Enviar a Supabase",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [
+        160,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  let raw = item.json?.message?.content || \"\";\n\n  // 1️⃣ Limpia etiquetas de bloque de código\n  raw = raw.replace(/```json|```/gi, \"\").trim();\n\n  // 2️⃣ Normaliza emojis y caracteres Unicode\n  raw = raw.normalize(\"NFC\");\n\n  let clean = {};\n  try {\n    // Intento directo\n    clean = JSON.parse(raw);\n  } catch (error) {\n    try {\n      // Segundo intento reparando comillas y saltos\n      const fixed = raw\n        .replace(/\\n/g, \"\\\\n\")\n        .replace(/\\r/g, \"\")\n        .replace(/“|”/g, '\"')\n        .replace(/‘|’/g, \"'\");\n      clean = JSON.parse(fixed);\n    } catch (e2) {\n      // Si falla, devolvemos el texto crudo\n      clean = {\n        parse_error: true,\n        raw_output: raw,\n        error_message: e2.message\n      };\n    }\n  }\n\n  // 3️⃣ Asegura compatibilidad con n8n → debe ir dentro de { json: {...} }\n  return {\n    json: clean\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -48,
+        -80
+      ],
+      "id": "7ce58d38-3519-49e1-9d00-db8e7173785c",
+      "name": "Code in JavaScript2"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/youtube/v3/commentThreads",
+        "options": {},
+        "queryParametersUi": {
+          "parameter": [
+            {
+              "name": "part",
+              "value": "snippet"
+            },
+            {
+              "name": "videoId",
+              "value": "5KmpT-BoVf4"
+            },
+            {
+              "name": "maxResults",
+              "value": "100"
+            },
+            {
+              "name": "key",
+              "value": "AIzaSyCEQXs4gvX_pz7CSXIs6buFsnMJC7bxV0o"
+            }
+          ]
+        }
+      },
+      "id": "d2cfafd2-1093-43da-8e96-37a1791aa4a2",
+      "name": "Get YouTube Comments3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 2,
+      "position": [
+        -2160,
+        192
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Start": {
+      "main": [
+        [
+          {
+            "node": "Get YouTube Comments3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limpiar Comentarios": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Analizador de Sentimiento (GPT-4-mini)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analizador de Sentimiento (GPT-4-mini)": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript (Clean Data)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript (Clean Data)": {
+      "main": [
+        [
+          {
+            "node": "Generador de Post (GPT-5 – Community Manager)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generador de Post (GPT-5 – Community Manager)": {
+      "main": [
+        [
+          {
+            "node": "Preparar para Notion",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Preparar para Notion": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Enviar a Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get YouTube Comments3": {
+      "main": [
+        [
+          {
+            "node": "Limpiar Comentarios",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "7244c95f-79ab-4d12-ab89-0fe8507f9755",
+  "meta": {
+    "instanceId": "4760df52cf42a11720bd933ee908e14298c450c7df61b3162cd83ab0114b4568"
+  },
+  "id": "2TR9qOW13xD4uhZK",
+  "tags": []
+}
