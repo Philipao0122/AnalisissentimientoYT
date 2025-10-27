@@ -1,4 +1,4 @@
-fluj# 🧠 SentimentIA – Flujo de Análisis Emocional y Generación de Post para Redes Sociales (LinkedIn / X)
+flujo 🧠 SentimentIA – Flujo de Análisis Emocional y Generación de Post para Redes Sociales (LinkedIn / X)
 
 ## 📋 Descripción General
 
